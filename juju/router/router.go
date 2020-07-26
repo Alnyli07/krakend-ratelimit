@@ -59,9 +59,9 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 		case float64:
 			cfg.MaxRate = val
 		case int:
-			cfg.MaxRate = int64(val)
+			cfg.MaxRate = float64(val)
 		case int64:
-			cfg.MaxRate = int64(val)
+			cfg.MaxRate = float64(val)
 		}
 	}
 	if v, ok := tmp["strategy"]; ok {
@@ -72,9 +72,9 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 		case float64:
 			cfg.ClientMaxRate = val
 		case int:
-			cfg.ClientMaxRate = int64(val)
+			cfg.ClientMaxRate = float64(val)
 		case int64:
-			cfg.ClientMaxRate = int64(val)
+			cfg.ClientMaxRate = float64(val)
 		}
 	}
 	if v, ok := tmp["capacity"]; ok {
