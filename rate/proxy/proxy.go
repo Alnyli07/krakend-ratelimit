@@ -40,12 +40,12 @@ import (
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/proxy"
 
-	"github.com/devopsfaith/krakend-ratelimit"
-	"github.com/devopsfaith/krakend-ratelimit/rate"
+	"github.com/alnyli07/krakend-ratelimit"
+	"github.com/alnyli07/krakend-ratelimit/rate"
 )
 
 // Namespace is the key to use to store and access the custom config data for the proxy
-const Namespace = "github.com/devopsfaith/krakend-ratelimit/rate/proxy"
+const Namespace = "github.com/alnyli07/krakend-ratelimit/rate/proxy"
 
 // Config is the custom config struct containing the params for the limiter
 type Config struct {

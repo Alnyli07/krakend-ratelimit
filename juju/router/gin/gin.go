@@ -9,9 +9,9 @@ import (
 	krakendgin "github.com/devopsfaith/krakend/router/gin"
 	"github.com/gin-gonic/gin"
 
-	"github.com/devopsfaith/krakend-ratelimit"
-	"github.com/devopsfaith/krakend-ratelimit/juju"
-	"github.com/devopsfaith/krakend-ratelimit/juju/router"
+	"github.com/alnyli07/krakend-ratelimit"
+	"github.com/alnyli07/krakend-ratelimit/juju"
+	"github.com/alnyli07/krakend-ratelimit/juju/router"
 )
 
 // HandlerFactory is the out-of-the-box basic ratelimit handler factory using the default krakend endpoint
@@ -29,14 +29,14 @@ func NewRateLimiterMw(next krakendgin.HandlerFactory) krakendgin.HandlerFactory 
 		}
 
 		if cfg.MaxRate > 0 {
-			handlerFunc = NewEndpointRateLimiterMw(juju.NewLimiter(float64(cfg.MaxRate), cfg.MaxRate))(handlerFunc)
+			handlerFunc = NewEndpointRateLimiterMw(juju.NewLimiter(cfg.MaxRate, cfg.Capacity))(handlerFunc)
 		}
 		if cfg.ClientMaxRate > 0 {
 			switch strings.ToLower(cfg.Strategy) {
 			case "ip":
-				handlerFunc = NewIpLimiterMw(float64(cfg.ClientMaxRate), cfg.ClientMaxRate)(handlerFunc)
+				handlerFunc = NewIpLimiterMw(cfg.ClientMaxRate, cfg.Capacity)(handlerFunc)
 			case "header":
-				handlerFunc = NewHeaderLimiterMw(cfg.Key, float64(cfg.ClientMaxRate), cfg.ClientMaxRate)(handlerFunc)
+				handlerFunc = NewHeaderLimiterMw(cfg.Key, cfg.ClientMaxRate, cfg.Capacity)(handlerFunc)
 			}
 		}
 		return handlerFunc

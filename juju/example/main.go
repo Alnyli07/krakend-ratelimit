@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	jujuproxy "github.com/devopsfaith/krakend-ratelimit/juju/proxy"
-	jujurouter "github.com/devopsfaith/krakend-ratelimit/juju/router/gin"
+	jujuproxy "github.com/alnyli07/krakend-ratelimit/juju/proxy"
+	jujurouter "github.com/alnyli07/krakend-ratelimit/juju/router/gin"
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/logging"
 	"github.com/devopsfaith/krakend/proxy"

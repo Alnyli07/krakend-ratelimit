@@ -8,7 +8,7 @@ import (
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/proxy"
 
-	"github.com/devopsfaith/krakend-ratelimit"
+	"github.com/alnyli07/krakend-ratelimit"
 )
 
 func TestNewMiddleware_multipleNext(t *testing.T) {

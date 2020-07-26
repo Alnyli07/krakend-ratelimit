@@ -28,14 +28,15 @@ import (
 )
 
 // Namespace is the key to use to store and access the custom config data for the router
-const Namespace = "github.com/devopsfaith/krakend-ratelimit/juju/router"
+const Namespace = "github.com/alnyli07/krakend-ratelimit/juju/router"
 
 // Config is the custom config struct containing the params for the router middlewares
 type Config struct {
-	MaxRate       int64
+	MaxRate       float64
 	Strategy      string
-	ClientMaxRate int64
+	ClientMaxRate float64
 	Key           string
+	Capacity 	  int64	
 }
 
 // ZeroCfg is the zero value for the Config struct
@@ -55,11 +56,11 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 	cfg := Config{}
 	if v, ok := tmp["maxRate"]; ok {
 		switch val := v.(type) {
-		case int64:
+		case float64:
 			cfg.MaxRate = val
 		case int:
 			cfg.MaxRate = int64(val)
-		case float64:
+		case int64:
 			cfg.MaxRate = int64(val)
 		}
 	}
@@ -68,12 +69,22 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 	}
 	if v, ok := tmp["clientMaxRate"]; ok {
 		switch val := v.(type) {
-		case int64:
+		case float64:
 			cfg.ClientMaxRate = val
 		case int:
 			cfg.ClientMaxRate = int64(val)
-		case float64:
+		case int64:
 			cfg.ClientMaxRate = int64(val)
+		}
+	}
+	if v, ok := tmp["capacity"]; ok {
+		switch val := v.(type) {
+		case int64:
+			cfg.Capacity = val
+		case int:
+			cfg.Capacity = int64(val)
+		case float64:
+			cfg.Capacity = int64(val)
 		}
 	}
 	if v, ok := tmp["key"]; ok {

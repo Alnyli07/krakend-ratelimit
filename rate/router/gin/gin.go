@@ -9,9 +9,9 @@ import (
 	krakendgin "github.com/devopsfaith/krakend/router/gin"
 	"github.com/gin-gonic/gin"
 
-	"github.com/devopsfaith/krakend-ratelimit"
-	"github.com/devopsfaith/krakend-ratelimit/rate"
-	"github.com/devopsfaith/krakend-ratelimit/rate/router"
+	"github.com/alnyli07/krakend-ratelimit"
+	"github.com/alnyli07/krakend-ratelimit/rate"
+	"github.com/alnyli07/krakend-ratelimit/rate/router"
 )
 
 // HandlerFactory is the out-of-the-box basic ratelimit handler factory using the default krakend endpoint

@@ -13,8 +13,8 @@ import (
 	http "github.com/devopsfaith/krakend/transport/http/server"
 	"github.com/gin-gonic/gin"
 
-	rateproxy "github.com/devopsfaith/krakend-ratelimit/rate/proxy"
-	raterouter "github.com/devopsfaith/krakend-ratelimit/rate/router/gin"
+	rateproxy "github.com/alnyli07/krakend-ratelimit/rate/proxy"
+	raterouter "github.com/alnyli07/krakend-ratelimit/rate/router/gin"
 )
 
 func main() {
