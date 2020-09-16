@@ -123,13 +123,13 @@ func (m *MemoryBackend) manageEvictions(ctx context.Context, ttl time.Duration) 
 			t.Stop()
 			return
 		case now := <-t.C:
-			m.mu.RLock()
+			m.mu.Lock()
 			for k, v := range m.lastAccess {
 				if v.Add(ttl).Before(now) {
 					keysToDel = append(keysToDel, k)
 				}
 			}
-			m.mu.RUnlock()
+			m.mu.Unlock()
 		}
 
 		m.del(keysToDel...)
@@ -138,9 +138,9 @@ func (m *MemoryBackend) manageEvictions(ctx context.Context, ttl time.Duration) 
 
 // Load implements the Backend interface
 func (m *MemoryBackend) Load(key string, f func() interface{}) interface{} {
-	m.mu.RLock()
+	m.mu.Lock()
 	v, ok := m.data[key]
-	m.mu.RUnlock()
+	m.mu.Unlock()
 
 	n := now()
 
