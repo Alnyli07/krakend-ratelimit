@@ -31,13 +31,18 @@ func (l Limiter) Allow() bool {
 
 // NewLimiterStore returns a LimiterStore using the received backend for persistence
 func NewLimiterStore(maxRate float64, capacity int, backend krakendrate.Backend) krakendrate.LimiterStore {
-	f := func() interface{} { return NewLimiter(maxRate, capacity) }
 	return func(t string) krakendrate.Limiter {
-		return backend.Load(t, f).(Limiter)
+		tmp, ok := backend.Load(t)
+		if !ok {
+			tb := NewLimiter(maxRate, capacity)
+			backend.Store(t, tb)
+			return tb
+		}
+		return tmp.(Limiter)
 	}
 }
 
 // NewMemoryStore returns a LimiterStore using the memory backend
 func NewMemoryStore(maxRate float64, capacity int) krakendrate.LimiterStore {
-	return NewLimiterStore(maxRate, capacity, krakendrate.DefaultShardedMemoryBackend(context.Background()))
+	return NewLimiterStore(maxRate, capacity, krakendrate.NewMemoryBackend())
 }
