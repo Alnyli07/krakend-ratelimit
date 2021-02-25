@@ -7,7 +7,6 @@ and http://en.wikipedia.org/wiki/Token_bucket for more details.
 package juju
 
 import (
-	"context"
 
 	"github.com/juju/ratelimit"
 

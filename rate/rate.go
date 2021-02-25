@@ -7,7 +7,6 @@ and http://en.wikipedia.org/wiki/Token_bucket for more details.
 package rate
 
 import (
-	"context"
 
 	"golang.org/x/time/rate"
 
