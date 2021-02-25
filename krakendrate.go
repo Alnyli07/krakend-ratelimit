@@ -85,7 +85,7 @@ func (m *MemoryBackend) del(key string) {
 func autoCleanup(ttl time.Duration) {
 	for {
 		<-time.After(ttl)
-		mu.RLock()
+		mu.Lock()
 		if len(stores) < runtime.NumCPU() {
 			for _, store := range stores {
 				store.mu.Lock()
@@ -96,7 +96,7 @@ func autoCleanup(ttl time.Duration) {
 				}
 				store.mu.Unlock()
 			}
-			mu.RUnlock()
+			mu.Unlock()
 			continue
 		}
 
@@ -114,6 +114,6 @@ func autoCleanup(ttl time.Duration) {
 				}
 			}(stores[i*block : (i+1)*block])
 		}
-		mu.RUnlock()
+		mu.Unlock()
 	}
 }
