@@ -2,8 +2,8 @@
 package krakendrate
 
 import (
-	"context"
 	"errors"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -12,11 +12,12 @@ var (
 	// ErrLimited is the error returned when the rate limit has been exceded
 	ErrLimited = errors.New("ERROR: rate limit exceded")
 
-	// DataTTL is the default eviction time
 	DataTTL = 10 * time.Minute
 
-	now           = time.Now
-	shards uint64 = 2048
+	now    = time.Now
+	stores = []*MemoryBackend{}
+	mu     = new(sync.RWMutex)
+	once   = new(sync.Once)
 )
 
 // Limiter defines a simple interface for a rate limiter
@@ -27,81 +28,24 @@ type Limiter interface {
 // LimiterStore defines the interface for a limiter lookup function
 type LimiterStore func(string) Limiter
 
-// Hasher gets a hash for the received string
-type Hasher func(string) uint64
-
 // Backend is the interface of the persistence layer
 type Backend interface {
-	Load(string, func() interface{}) interface{}
+	Load(string) (interface{}, bool)
 	Store(string, interface{}) error
 }
 
-// ShardedMemoryBackend is a memory backend shardering the data in order to avoid mutex contention
-type ShardedMemoryBackend struct {
-	shards []*MemoryBackend
-	total  uint64
-	hasher Hasher
-}
-
-// DefaultShardedMemoryBackend is a 2018 sharded ShardedMemoryBackend
-func DefaultShardedMemoryBackend(ctx context.Context) *ShardedMemoryBackend {
-	return NewShardedMemoryBackend(ctx, shards, DataTTL, PseudoFNV64a)
-}
-
-// NewShardedMemoryBackend returns a ShardedMemoryBackend with 'shards' shards
-func NewShardedMemoryBackend(ctx context.Context, shards uint64, ttl time.Duration, h Hasher) *ShardedMemoryBackend {
-	b := &ShardedMemoryBackend{
-		shards: make([]*MemoryBackend, shards),
-		total:  shards,
-		hasher: h,
-	}
-	var i uint64
-	for i = 0; i < shards; i++ {
-		b.shards[i] = NewMemoryBackend(ctx, ttl)
-	}
-	return b
-}
-
-func (b *ShardedMemoryBackend) shard(key string) uint64 {
-	return b.hasher(key) % b.total
-}
-
-// Load implements the Backend interface
-func (b *ShardedMemoryBackend) Load(key string, f func() interface{}) interface{} {
-	return b.shards[b.shard(key)].Load(key, f)
-}
-
-// Store implements the Backend interface
-func (b *ShardedMemoryBackend) Store(key string, v interface{}) error {
-	return b.shards[b.shard(key)].Store(key, v)
-}
-
-func (b *ShardedMemoryBackend) del(key ...string) {
-	buckets := map[uint64][]string{}
-	for _, k := range key {
-		h := b.shard(k)
-		ks, ok := buckets[h]
-		if !ok {
-			ks = []string{k}
-		} else {
-			ks = append(ks, k)
-		}
-		buckets[h] = ks
-	}
-
-	for s, ks := range buckets {
-		b.shards[s].del(ks...)
-	}
-}
-
-func NewMemoryBackend(ctx context.Context, ttl time.Duration) *MemoryBackend {
+func NewMemoryBackend() *MemoryBackend {
 	m := &MemoryBackend{
 		data:       map[string]interface{}{},
 		lastAccess: map[string]time.Time{},
 		mu:         new(sync.RWMutex),
 	}
 
-	go m.manageEvictions(ctx, ttl)
+	mu.Lock()
+	stores = append(stores, m)
+	mu.Unlock()
+
+	once.Do(func() { go autoCleanup(DataTTL) })
 
 	return m
 }
@@ -113,62 +57,15 @@ type MemoryBackend struct {
 	mu         *sync.RWMutex
 }
 
-func (m *MemoryBackend) manageEvictions(ctx context.Context, ttl time.Duration) {
-	t := time.NewTicker(ttl)
-	for {
-		keysToDel := []string{}
-
-		select {
-		case <-ctx.Done():
-			t.Stop()
-			return
-		case now := <-t.C:
-			m.mu.Lock()
-			for k, v := range m.lastAccess {
-				if v.Add(ttl).Before(now) {
-					keysToDel = append(keysToDel, k)
-				}
-			}
-			m.mu.Unlock()
-		}
-
-		m.del(keysToDel...)
-	}
-}
-
 // Load implements the Backend interface
-func (m *MemoryBackend) Load(key string, f func() interface{}) interface{} {
+func (m *MemoryBackend) Load(key string) (interface{}, bool) {
 	m.mu.Lock()
 	v, ok := m.data[key]
+	if ok {
+		m.lastAccess[key] = now()
+	}
 	m.mu.Unlock()
-
-	n := now()
-
-	if ok {
-		go func(t time.Time) {
-			m.mu.Lock()
-			if t0, ok := m.lastAccess[key]; !ok || t.After(t0) {
-				m.lastAccess[key] = t
-			}
-			m.mu.Unlock()
-		}(n)
-
-		return v
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	v, ok = m.data[key]
-	if ok {
-		return v
-	}
-
-	v = f()
-	m.lastAccess[key] = n
-	m.data[key] = v
-
-	return v
+	return v, ok
 }
 
 // Store implements the Backend interface
@@ -180,11 +77,43 @@ func (m *MemoryBackend) Store(key string, v interface{}) error {
 	return nil
 }
 
-func (m *MemoryBackend) del(key ...string) {
-	m.mu.Lock()
-	for _, k := range key {
-		delete(m.data, k)
-		delete(m.lastAccess, k)
+func (m *MemoryBackend) del(key string) {
+	delete(m.data, key)
+	delete(m.lastAccess, key)
+}
+
+func autoCleanup(ttl time.Duration) {
+	for {
+		<-time.After(ttl)
+		mu.RLock()
+		if len(stores) < runtime.NumCPU() {
+			for _, store := range stores {
+				store.mu.Lock()
+				for k, v := range store.lastAccess {
+					if time.Since(v) > ttl {
+						store.del(k)
+					}
+				}
+				store.mu.Unlock()
+			}
+			mu.RUnlock()
+			continue
+		}
+
+		block := len(stores) / runtime.NumCPU()
+		for i := 0; i < runtime.NumCPU(); i++ {
+			go func(stores []*MemoryBackend) {
+				for _, store := range stores {
+					store.mu.Lock()
+					for k, v := range store.lastAccess {
+						if time.Since(v) > ttl {
+							store.del(k)
+						}
+					}
+					store.mu.Unlock()
+				}
+			}(stores[i*block : (i+1)*block])
+		}
+		mu.RUnlock()
 	}
-	m.mu.Unlock()
 }
