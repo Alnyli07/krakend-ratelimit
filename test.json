@@ -1,7 +1,7 @@
 {
- "CONFIG_URL": "aaaaa",
+ "CONFIG_URL": "aa",
  "test":"test",
- "STATE": "run",
+ "STATE": "stop",
  "START_DATE": "2021-03-03 19:41:00",
  "default": {
   "FOR_TO": 3
